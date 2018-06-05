@@ -1,0 +1,45 @@
+---
+title: "Desafio_Data_Science"
+author: "Henrique C Vieira"
+date: "June 4, 2018"
+output: html_document
+---
+
+# Analysis Bank
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(readr)
+```
+
+## Load and describe data
+```{r load data}
+dataset <- read_delim('bank/bank.csv', delim = ';')
+glimpse(dataset)
+```
+
+## 
+```{r}
+dataset %>%
+  group_by(job) %>%
+  count(marital, sort = TRUE)
+```
+
+```{r}
+dataset %>%
+  group_by(poutcome) %>% 
+  filter(poutcome == "success") %>%
+  count(campaign, sort = TRUE)
+```
+
+```{r}
+ggplot(dataset, aes(x=education)) + 
+  geom_histogram(stat = "count")
+```
+

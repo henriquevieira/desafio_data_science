@@ -24,6 +24,12 @@ dataset <- read_delim('bank/bank.csv', delim = ';')
 glimpse(dataset)
 ```
 
+```{r}
+dataset %>%
+  summary()
+```
+
+
 ## 
 ```{r}
 dataset %>%
@@ -42,4 +48,12 @@ dataset %>%
 ggplot(dataset, aes(x=education)) + 
   geom_histogram(stat = "count")
 ```
+
+```{r}
+ggplot(dataset, aes(x=age)) + 
+  geom_density() + 
+  geom_vline(aes(xintercept=mean(age)),
+            color="blue", linetype="dashed", size=1)
+```
+
 

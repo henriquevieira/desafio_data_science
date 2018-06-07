@@ -2,7 +2,9 @@
 title: "Desafio_Data_Science"
 author: "Henrique C Vieira"
 date: "June 4, 2018"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Analysis Bank
@@ -23,6 +25,25 @@ library(readr)
 dataset <- read_delim('bank/bank.csv', delim = ';')
 glimpse(dataset)
 ```
+
+# Turn data in correct format
+```{r}
+dataset$job <- as.factor(dataset$job)
+dataset$marital <- as.factor(dataset$marital)
+dataset$education <- as.factor(dataset$education)
+dataset$default <- ifelse(dataset$default == 'yes', TRUE, FALSE)
+dataset$housing <- ifelse(dataset$housing == 'yes', TRUE, FALSE)
+dataset$loan <- ifelse(dataset$loan == 'yes', TRUE, FALSE)
+dataset$contact <- as.factor(dataset$contact)
+dataset$day <- as.factor(dataset$day)
+dataset$month <- as.factor(dataset$month)
+dataset$campaign <- as.factor(dataset$campaign)
+dataset$poutcome <- as.factor(dataset$poutcome)
+dataset$y <- ifelse(dataset$y == 'yes', TRUE, FALSE)
+dataset$term <- dataset$y
+glimpse(dataset)
+```
+
 
 ```{r}
 dataset %>%
@@ -46,14 +67,96 @@ dataset %>%
 
 ```{r}
 ggplot(dataset, aes(x=education)) + 
-  geom_histogram(stat = "count")
+  geom_bar()
 ```
 
 ```{r}
-ggplot(dataset, aes(x=age)) + 
+dataset %>% 
+  summarise(avg=mean(age), sd=sd(age))
+```
+
+
+```{r}
+ggplot(dataset, aes(x=age, y=..density..)) + 
+  geom_histogram() +
   geom_density() + 
   geom_vline(aes(xintercept=mean(age)),
             color="blue", linetype="dashed", size=1)
 ```
 
+There are many unknown values
+```{r}
+ggplot(dataset, aes(x=poutcome, fill=term)) +
+  geom_bar()
+```
+
+View by campaign
+```{r}
+ggplot(dataset, aes(x=campaign, fill=term)) +
+  geom_bar() +
+  facet_grid(poutcome ~ .)
+```
+
+# Predict
+
+```{r}
+library(naivebayes)
+```
+
+## Make two groups: train and control
+```{r}
+set.seed(100)
+pos <- sample(1:nrow(dataset), round(nrow(dataset)*0.1, 0))
+dataset_train <- dataset[-pos,]
+dataset_test <- dataset[pos,]
+class <- dataset_test$term
+dataset_test <- dataset_test[,!colnames(dataset_test)=='term']
+```
+
+Job - Marital - Education
+
+```{r}
+# job
+# marital
+# education
+# default
+# housing
+# loan
+# contact
+# day
+# month
+# campaign
+# poutcome
+
+m <- naive_bayes(term ~ job +
+                        marital +
+                        education +
+                        default +
+                        housing +
+                        loan +
+                        contact +
+                        day +
+                        month +
+                        campaign +
+                        poutcome, dataset_train)
+```
+
+```{r}
+pred <- predict(m, dataset_test)
+```
+
+```{r}
+confusion_matrix <- table(pred, class)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,2] + confusion_matrix[2,2]) / sum(confusion_matrix)
+recall <- confusion_matrix[2,2] / (confusion_matrix[1,1] + confusion_matrix[2,2])
+precision <- confusion_matrix[2,2] / (confusion_matrix[2,1] + confusion_matrix[2,2])
+
+accuracy
+recall
+precision
+```
 

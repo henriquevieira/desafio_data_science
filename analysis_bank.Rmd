@@ -20,11 +20,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Carregando bibliotecas a serem usadas nesse projeto.
 
-```{r load libraries}
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(readr)
+```{r load libraries, warning=FALSE}
+library(dplyr, warn.conflicts=FALSE, verbose=FALSE)
+library(ggplot2, warn.conflicts=FALSE, verbose=FALSE)
+library(tidyr, warn.conflicts=FALSE, verbose=FALSE)
+library(readr, warn.conflicts=FALSE, verbose=FALSE)
 ```
 
 ### Carregando o dataset bank e descrição das variáveis.
@@ -337,4 +337,6 @@ plotcp(m2)
 rpart.plot::rpart.plot(m2)
 ```
 
-Dado este resultado obtido com Decision Tree, podemos afirmar que podemos dizer quando um cliente não tem interesse em assinar o contrato, ou seja, nega-lo, temos uma grande precisão para afirmar isso. Quanto a predizer os que irão assinar, temos um grande número de verdadeiros negativos, fazendo com que erramos.
+Dado este resultado obtido com Decision Tree, podemos observar que o desbalanceamento da váriavel *term* (inicialmente chamada de *y*) nos permite ter um grande sucesso em predizer quando ocorre 'No' mas erra muito ao tentar predizer o 'Yes'.
+
+Abaixo iremos balancear este dado e vamos observar se temos uma melhora na predição.

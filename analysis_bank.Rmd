@@ -340,3 +340,9 @@ rpart.plot::rpart.plot(m2)
 Dado este resultado obtido com Decision Tree, podemos observar que o desbalanceamento da váriavel *term* (inicialmente chamada de *y*) nos permite ter um grande sucesso em predizer quando ocorre 'No' mas erra muito ao tentar predizer o 'Yes'.
 
 Abaixo iremos balancear este dado e vamos observar se temos uma melhora na predição.
+
+```{r}
+table(dataset$poutcome, dataset$term)
+```
+
+

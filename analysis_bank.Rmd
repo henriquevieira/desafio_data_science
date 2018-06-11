@@ -20,20 +20,36 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Carregando bibliotecas a serem usadas nesse projeto.
 
-```{r load libraries}
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-library(readr)
+```{r load libraries, warning=FALSE}
+library(dplyr, warn.conflicts=FALSE, verbose=FALSE)
+library(ggplot2, warn.conflicts=FALSE, verbose=FALSE)
+library(tidyr, warn.conflicts=FALSE, verbose=FALSE)
+library(readr, warn.conflicts=FALSE, verbose=FALSE)
+library(FSelector)
 ```
 
-### Carregando o dataset bank e descrição das variáveis.
+### Introdução
+
+Este é um dado relacionado com as campanhas de marketing de uma instuição bancária de Portugal. São campanhas baseadas em ligações telefônicas para oferecer aos clientes o serviço de depósito a prazo fixo (bank term deposit), onde poderão retirar o valor após o prazo ter vencido.
+
+O termo term deposit:
+A term deposit is a fixed-term deposit held at a financial institution. They are generally short-term deposits with maturities ranging anywhere from a month to a few years. When a term deposit is purchased, the client understands that the money can only be withdrawn after the term has ended or by giving a predetermined number of days notice. [Investopedia](https://www.investopedia.com/terms/t/termdeposit.asp)
+
+[Moro et al., 2011] S. Moro, R. Laureano and P. Cortez. Using Data Mining for Bank Direct Marketing: An Application of the CRISP-DM Methodology. 
+  In P. Novais et al. (Eds.), Proceedings of the European Simulation and Modelling Conference - ESM'2011, pp. 117-121, Guimarães, Portugal, October, 2011. EUROSIS.
+
+  Available at: [pdf] http://hdl.handle.net/1822/14838
+                [bib] http://www3.dsi.uminho.pt/pcortez/bib/2011-esm-1.txt
+
+### Carregando o dataset bank
+Utilizaremos o pacote readr, que permite carregar dados em formato csv e tsv mais rápido que as funções básicas do R para carregar dados. 
 ```{r load data}
 dataset <- read_delim('bank/bank.csv', delim = ';')
 glimpse(dataset)
 ```
 
 ### Alterando o tipo da coluna para o tipo correto
+Alterando as colunas do tipo texto para colunas do tipo categórico, em R são do tipo factor. As colunas com valores 'yes' e 'no' foram transfomadas em valores lógicos TRUE e FALSE.
 
 ```{r}
 dataset$job <- as.factor(dataset$job)
@@ -55,13 +71,13 @@ glimpse(dataset)
 ### Sumarização dos dados
 Podemos observar abaixo, os valores de minimo, máximo, 1º, 2º (mediana) e 3º quartil e a média para dados númericos e a contagem individual para cada valor para os dados categóricos.
 
-Podemos perceber o desbalanceamento dos dados.
+Podemos perceber um grande desbalanceamento dos dados.
 ```{r}
 dataset %>%
   summary()
 ```
 
-### Relações e gráficos
+### Relações dos dados e gráficos
 
 #### Número de individuos pela ocupação profissional e estado civil.
 ```{r}
@@ -74,7 +90,6 @@ dataset %>%
 ```{r}
 dataset %>%
   group_by(poutcome) %>% 
-  filter(poutcome == "success") %>%
   count(campaign, sort = TRUE)
 ```
 
@@ -107,22 +122,124 @@ ggplot(dataset, aes(x=job, y=age)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-#### Número de contratos assinados
+#### Número de contratos assinados na campanha anterior
 ```{r}
-ggplot(dataset, aes(x=poutcome, fill=term)) +
+dataset %>%
+  filter(poutcome != 'unknown') %>%
+  ggplot(aes(x=poutcome)) +
   geom_bar()
 ```
 
-#### Número de contratos assinados pela campanha e estado (sucesso, falha e outros)
+#### Número de contatos pela campanha anterior e estado (sucesso, falha e outros)
 ```{r}
-ggplot(dataset, aes(x=campaign, fill=term)) +
+dataset %>%
+  filter(poutcome != 'unknown') %>%
+  ggplot(aes(x=as.factor(previous))) +
   geom_bar() +
   facet_grid(poutcome ~ .)
 ```
 
+# Respondendo as questões:
+
+### 1. Qual profissão tem mais tendência a fazer um empréstimo? De qual tipo?
+
+**Visualizando as profissões por empréstimo**
+```{r}
+ggplot(dataset, aes(x=job, fill=loan)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+**Visualizando as profissões por empréstimo imobiliário**
+```{r}
+ggplot(dataset, aes(x=job, fill=housing)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Como podemos observar pelos dois gráficos, o blue-collar e management são as duas profissões que mais se destacam. Vamos filtrar por essas duas profissões e analisar qual apresentar o maior número de empréstimos e de qual tipo.
+
+```{r}
+dataset %>% 
+  filter(loan == TRUE | housing == TRUE) %>%
+  filter(job == 'blue-collar' | job == 'management') %>%
+  count(job, loan, housing)
+```
+
+blue-collar é a profissão que mais realiza empréstimos e do tipo housing.
+
+### 2. Fazendo uma relação entre número de contatos e sucesso da campanha quais são os pontos relevantes a serem observados?
+
+No gráfico abaixo vemos o resultado da campanha anterior.
+```{r}
+dataset %>%
+  filter(poutcome != 'unknown') %>%
+  ggplot(aes(x=poutcome)) +
+  geom_bar()
+```
+
+```{r}
+dataset %>%
+  filter(poutcome == "success") %>%
+  count(previous, sort = TRUE)
+```
+
+Temos um grande numero de falhas na campanha anterior. Os contatos onde obtiveram sucesso se destacaram realizando de 1, 2, 3 ou até 4 contatos com o cliente. A partir de 6 ligações há um número menor de clientes que mudam de opinião e passam aderem.
+
+### 3. Baseando-se nos resultados de adesão desta campanha qual o número médio e o máximo de ligações que você indica para otimizar a adesão?
+
+```{r}
+dataset %>%
+  filter(poutcome == "success") %>%
+  count(previous, sort = TRUE) %>%
+  ggplot(aes(x=previous, y=n)) +
+  geom_line() +
+  geom_vline(aes(xintercept=4),
+            color="blue", linetype="dashed", size=1)
+```
+
+Observandoo gráfico acima, podemos perceber que há uma queda muito grande a partir de 5 ligações, sugiro em média 2 ligações e no máximo 4 para maximizar a adesão de novos clientes.
+
+### 4. O resultado da campanha anterior tem relevância na campanha atual?
+
+```{r}
+table(dataset$poutcome, dataset$term)
+```
+
+Houve pouca relevância nessa campanha, o número de adesão é baixo em relação a atual com a anterior, inclusive havendo uma desistência dos que assinaram na campanha anterior.
+
+### 5. Qual o fator determinante para que o banco exija um seguro de crédito?
+
+Segundo a pagina [euler hermes](http://www.eulerhermes.com.br/pt/seguro-de-credito/conhecimento/Pages/o-que-e-seguro-de-credito.aspx):
+
+"O seguro de crédito protege o seu negócio contra o não pagamento da dívida de transações comerciais."
+
+Os clientes inadimplentes, identificado pela categoria 'default', tendem a criar novas dívidas, para estes clientes, deverá ser exigido o seguro de crédito. Neste dados temos poucos inadimplentes, como visto no gráfico abaixo.
+
+```{r}
+ggplot(dataset, aes(x=default)) +
+  geom_bar()
+```
+
+### 6. Quais são as características mais proeminentes de um cliente que possua empréstimo imobiliário?
+
+Utilizamos o V de Cramer para calcular a relação entre as caracteristicas. Quanto mais proximo de 1, indica uma relação mais forte entre as caracteristicas observadas.
+
+```{r}
+housing_result <- chi.squared(housing ~ ., dataset)
+housing_result
+```
+
+Usaremos aqui a função cutoff.k que irá selecionar as 6 caracteristicas com valor de V de Cramer mais alto.
+```{r}
+cutoff.k(housing_result, 6)
+```
+
+Descartando as caracteristicas "month", "contact", "day" e "pdays", pois não são relacionadas diretamente ao perfil cliente, temos então "job" (emprego) e "age" (idade) como fatores principais que caracterizam um cliente com empréstimo imobiliário.
+
 # Predição
 
-Usando tecnicas de aprendizado de maquina, vamos substituir os valores 'unknown' por outros valores.
+Usando tecnicas de aprendizado de maquina, vamos substituir os valores 'unknown' por valores preditos.
 
 ```{r}
 library(rpart)
@@ -154,7 +271,7 @@ plotcp(job_model)
 rpart.plot::rpart.plot(job_model)
 ```
 
-Put new values
+### Inserindo os valores preditos na caracteristica 'job'
 ```{r}
 dataset$job[job_unknown] <- job_pred
 dataset$job <- droplevels(dataset$job)
@@ -188,7 +305,7 @@ plotcp(education_model)
 rpart.plot::rpart.plot(education_model)
 ```
 
-Put new values
+### Inserindo os valores preditos na caracteristica 'education'
 ```{r}
 dataset$education[education_unknown] <- education_pred
 dataset$education <- droplevels(dataset$education)
@@ -222,7 +339,7 @@ plotcp(poutcome_model)
 rpart.plot::rpart.plot(poutcome_model)
 ```
 
-Put new values
+### Inserindo os valores preditos na caracteristica 'poutcome'
 ```{r}
 dataset$poutcome[poutcome_unknown] <- poutcome_pred
 dataset$poutcome <- droplevels(dataset$poutcome)
@@ -231,9 +348,9 @@ ggplot(dataset, aes(x=poutcome)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-# Predict Term
+# Predição de Term
 
-## Make two groups: train and control
+## Divisão em dois grupos: train and control
 ```{r}
 set.seed(100)
 pos <- sample(1:nrow(dataset), round(nrow(dataset)*0.1, 0))
@@ -245,7 +362,7 @@ dataset_test <- dataset_test[,!colnames(dataset_test)=='term']
 
 ### Naive bayes
 
-Using all categoric features
+Usando todas as caracteristicas categoricas
 ```{r}
 # job
 # marital
@@ -278,14 +395,14 @@ pred <- predict(m, dataset_test)
 ```
 
 ```{r}
-confusion_matrix <- table(pred, class)
+confusion_matrix <- table(class, pred)
 confusion_matrix
 ```
 
 ```{r}
-accuracy <- (confusion_matrix[1,2] + confusion_matrix[2,2]) / sum(confusion_matrix)
-recall <- confusion_matrix[2,2] / (confusion_matrix[1,1] + confusion_matrix[2,2])
-precision <- confusion_matrix[2,2] / (confusion_matrix[2,1] + confusion_matrix[2,2])
+accuracy <- (confusion_matrix[2,2] + confusion_matrix[1,1]) / sum(confusion_matrix)
+recall <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[2,1])
+precision <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[1,2])
 
 accuracy
 recall
@@ -293,6 +410,30 @@ precision
 ```
 
 ### Decision tree
+
+Selecionando as caracteristicas para o modelo.
+
+```{r}
+# job
+# marital
+# education
+# default
+# housing
+# loan
+# contact
+# day
+# month
+# campaign
+# poutcome
+d <- dataset[, colnames(dataset) != 'y']
+weights <- chi.squared(term ~ ., d)
+print(weights)
+```
+
+```{r}
+cutoff.k(weights, 5)
+```
+
 
 ```{r}
 m2 <- rpart(term ~ duration +
@@ -304,8 +445,10 @@ m2 <- rpart(term ~ duration +
                    # loan +
                    # contact +
                    # day +
-                   # month +
-                   campaign +
+                   month +
+                   pdays +
+                   previous +
+                   # campaign +
                    poutcome,
                    dataset_train, method = 'class')
 ```
@@ -315,14 +458,14 @@ pred2	<- predict(m2,	dataset_test,	type	=	"class")
 ```
 
 ```{r}
-confusion_matrix <- table(pred2, class)
+confusion_matrix <- table(class, pred2)
 confusion_matrix
 ```
 
 ```{r}
-accuracy <- (confusion_matrix[1,2] + confusion_matrix[2,2]) / sum(confusion_matrix)
-recall <- confusion_matrix[2,2] / (confusion_matrix[1,1] + confusion_matrix[2,2])
-precision <- confusion_matrix[2,2] / (confusion_matrix[2,1] + confusion_matrix[2,2])
+accuracy <- (confusion_matrix[2,2] + confusion_matrix[1,1]) / sum(confusion_matrix)
+recall <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[2,1])
+precision <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[1,2])
 
 accuracy
 recall
@@ -337,4 +480,88 @@ plotcp(m2)
 rpart.plot::rpart.plot(m2)
 ```
 
-Dado este resultado obtido com Decision Tree, podemos afirmar que podemos dizer quando um cliente não tem interesse em assinar o contrato, ou seja, nega-lo, temos uma grande precisão para afirmar isso. Quanto a predizer os que irão assinar, temos um grande número de verdadeiros negativos, fazendo com que erramos.
+Dado este resultado obtido com Decision Tree, podemos observar que o desbalanceamento da váriavel *term* (inicialmente chamada de *y*) causa um grande problema ao classificador. Temos uma alta acurácia, mas uma baixa cobertura com os Verdadeiro Positivos. 
+
+# Balanceamento
+
+Abaixo iremos balancear este dado e vamos observar se temos uma melhora na predição.
+
+```{r}
+table(dataset$poutcome, dataset$term)
+```
+
+Utilizar 400 amostras que tiveram poutcome igual a 'failure' aparenta ser um valor razoavel para o experimento. Então buscamos maximizar o numero de contratos asssinados (term igual a TRUE) dentre as amostras sorteadas que obtiveram poutcome igual a 'failure'. Usaremos 500 sementes e verificar o valor maximo.
+
+```{r echo=FALSE}
+set.seed(110)
+term_false <- which(dataset$term == FALSE)
+term_true <- which(dataset$term != FALSE)
+# sortear 500 valores
+select_samples <- term_false[sample(1:length(term_false), 500)]
+dataset_balanced <- dataset[c(term_true, select_samples),]
+```
+
+```{r}
+table(dataset_balanced$poutcome, dataset_balanced$term)
+```
+
+# Predição
+
+## Divisão em dois grupos: train and control
+```{r}
+set.seed(110)
+pos <- sample(1:nrow(dataset_balanced), round(nrow(dataset_balanced)*0.1, 0))
+dataset_train <- dataset_balanced[-pos,]
+dataset_test <- dataset_balanced[pos,]
+class <- dataset_test$term
+dataset_test <- dataset_test[,!colnames(dataset_test)=='term']
+```
+
+### Decision tree
+
+```{r}
+m3 <- rpart(term ~ duration +
+                   # job +
+                   # marital +
+                   # education +
+                   # default +
+                   # housing +
+                   # loan +
+                   # contact +
+                   # day +
+                   month +
+                   pdays +
+                   previous +
+                   # campaign +
+                   poutcome,
+                   dataset_train, method = 'class')
+```
+
+```{r}
+pred3	<- predict(m3,	dataset_test,	type	=	"class")
+```
+
+```{r}
+confusion_matrix <- table(class, pred3)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / sum(confusion_matrix)
+recall <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[2,1])
+precision <- confusion_matrix[2,2] / (confusion_matrix[2,2] + confusion_matrix[1,2])
+
+accuracy
+recall
+precision
+```
+
+```{r}
+plotcp(m2)
+```
+
+```{r}
+rpart.plot::rpart.plot(m2)
+```
+
+Com o balanceamento conseguimos aumentar muito a cobertura dos Verdadeiros Positivos (0.8695652), tivemos uma queda na acurácia e um aumento na precisão. Este resultado pode ser mais refinado, melhorando a seleção de caracteristicas, o modelo e podando a arvore de decisão.

@@ -3,8 +3,8 @@ title: "Desafio Data Science"
 author: "Henrique C Vieira"
 date: "Junho 4, 2018"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 # Analisando os dados bank
@@ -360,6 +360,8 @@ class <- dataset_test$term
 dataset_test <- dataset_test[,!colnames(dataset_test)=='term']
 ```
 
+Para esta etapa utilizaremos os classificadores naive bayes e decision tree, ambos classificadores supervisionados que podem ser usados para a predição de valores categoricos. 
+
 ### Naive bayes
 
 Usando todas as caracteristicas categoricas
@@ -472,6 +474,7 @@ recall
 precision
 ```
 
+Complexidade da arvore.
 ```{r}
 plotcp(m2)
 ```
@@ -480,19 +483,19 @@ plotcp(m2)
 rpart.plot::rpart.plot(m2)
 ```
 
-Dado este resultado obtido com Decision Tree, podemos observar que o desbalanceamento da váriavel *term* (inicialmente chamada de *y*) causa um grande problema ao classificador. Temos uma alta acurácia, mas uma baixa cobertura com os Verdadeiro Positivos. 
+Dado este resultado obtido com naive bayes e decision tree, podemos observar que o desbalanceamento da váriavel *term* (inicialmente chamada de *y*) causa um grande problema ao classificador. Temos uma alta acurácia, mas uma baixa cobertura com os Verdadeiro Positivos. Nos proximos passos iremos aplicar uma forma de balanceamento da classe.
 
 # Balanceamento
 
-Abaixo iremos balancear este dado e vamos observar se temos uma melhora na predição.
+Abaixo iremos balancear este dado e vamos observar se temos uma melhora na predição. Podemos ver abaixo que o numero de valores FALSE é oito vezes maior que o numero de TRUE.
 
 ```{r}
-table(dataset$poutcome, dataset$term)
+table(dataset$term)
 ```
 
-Utilizar 400 amostras que tiveram poutcome igual a 'failure' aparenta ser um valor razoavel para o experimento. Então buscamos maximizar o numero de contratos asssinados (term igual a TRUE) dentre as amostras sorteadas que obtiveram poutcome igual a 'failure'. Usaremos 500 sementes e verificar o valor maximo.
+Selecionaremos 500 amostras aleatórias da classe 'term' cujo resultado tenha sido FALSE.
 
-```{r echo=FALSE}
+```{r}
 set.seed(110)
 term_false <- which(dataset$term == FALSE)
 term_true <- which(dataset$term != FALSE)
@@ -502,10 +505,10 @@ dataset_balanced <- dataset[c(term_true, select_samples),]
 ```
 
 ```{r}
-table(dataset_balanced$poutcome, dataset_balanced$term)
+table(dataset_balanced$term)
 ```
 
-# Predição
+# Predição com o dado balanceado
 
 ## Divisão em dois grupos: train and control
 ```{r}
@@ -516,6 +519,8 @@ dataset_test <- dataset_balanced[pos,]
 class <- dataset_test$term
 dataset_test <- dataset_test[,!colnames(dataset_test)=='term']
 ```
+
+Usaremos somente o decision tree e o mesmo modelo anterior para esta etapa.
 
 ### Decision tree
 
@@ -556,6 +561,7 @@ recall
 precision
 ```
 
+Complexidade da arvore.
 ```{r}
 plotcp(m2)
 ```
@@ -564,4 +570,4 @@ plotcp(m2)
 rpart.plot::rpart.plot(m2)
 ```
 
-Com o balanceamento conseguimos aumentar muito a cobertura dos Verdadeiros Positivos (0.8695652), tivemos uma queda na acurácia e um aumento na precisão. Este resultado pode ser mais refinado, melhorando a seleção de caracteristicas, o modelo e podando a arvore de decisão.
+Com o balanceamento conseguimos aumentar muito a cobertura dos Verdadeiros Positivos (0.8695652), tivemos uma queda na acurácia e um aumento na precisão. Este resultado pode ser mais refinado, melhorando a seleção de caracteristicas, melhorando o modelo e podando a arvore de decisão. 
